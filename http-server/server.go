@@ -16,16 +16,16 @@ type PlayerServer struct {
 
 func (p *PlayerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	player := strings.TrimPrefix(r.URL.Path, "/player/")
-	fmt.Fprint(w, getUserScore(player))
+	fmt.Fprint(w, p.store.GetPlayerScore(player))
 }
 
-func getUserScore(username string) string {
-	switch username {
-	case "Matthew":
-		return "20"
-	case "Tom":
-		return "10"
-	}
+// func getUserScore(username string) string {
+// 	switch username {
+// 	case "Matthew":
+// 		return "20"
+// 	case "Tom":
+// 		return "10"
+// 	}
 
-	return ""
-}
+// 	return ""
+// }

@@ -8,7 +8,13 @@ import (
 )
 
 func TestGETPlayers(t *testing.T) {
-	server := &PlayerServer{}
+	store := StubPlayerStore{
+		scores: map[string]int{
+			"Matthew": 20,
+			"Tom":     10,
+		},
+	}
+	server := &PlayerServer{store: &store}
 
 	t.Run("returns score of given username", func(t *testing.T) {
 		username := "Matthew"
@@ -50,6 +56,15 @@ func newGetScoreRequest(playername string) *http.Request {
 func assertResponseBody(t *testing.T, got, want string) {
 	t.Helper()
 	if got != want {
-		t.Errorf("expected %q, got %q", got, want)
+		t.Errorf("expected %q, got %q", want, got)
 	}
+}
+
+type StubPlayerStore struct {
+	scores map[string]int
+}
+
+func (s *StubPlayerStore) GetPlayerScore(name string) int {
+	score := s.scores[name]
+	return score
 }
