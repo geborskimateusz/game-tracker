@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,7 @@ func TestGETPlayers(t *testing.T) {
 			"Tom":     10,
 		},
 	}
-	server := &PlayerServer{&store}
+	server := NewPlayerServer(&store)
 
 	t.Run("returns score of given username", func(t *testing.T) {
 		username := "Matthew"
@@ -60,7 +61,7 @@ func TestStoreWin(t *testing.T) {
 		map[string]int{},
 		nil,
 	}
-	server := &PlayerServer{&store}
+	server := NewPlayerServer(&store)
 
 	t.Run("it returns accepted POST", func(t *testing.T) {
 		player := "Pepper"
@@ -80,6 +81,29 @@ func TestStoreWin(t *testing.T) {
 			t.Errorf("epeced player %q got %q", player, store.winCalls[0])
 		}
 	})
+}
+
+func TestLeague(t *testing.T) {
+	store := StubPlayerStore{}
+	server := NewPlayerServer(&store)
+
+	t.Run("it returns 200 on /league", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/league", nil)
+		res := httptest.NewRecorder()
+
+		server.ServeHTTP(res, req)
+
+		var got []Player
+
+		err := json.NewDecoder(res.Body).Decode(&got)
+
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Player, '%v'", res.Body, err)
+		}
+
+		assertStatusCode(t, res.Code, http.StatusOK)
+	})
+
 }
 
 func assertStatusCode(t *testing.T, got, want int) {

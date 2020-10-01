@@ -3,21 +3,43 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strings"
 )
 
+// PlayerStore stores score information about players.
 type PlayerStore interface {
 	GetPlayerScore(name string) int
 	RecordWin(name string)
 }
 
+// PlayerServer is a HTTP interface for player information.
 type PlayerServer struct {
 	store PlayerStore
+	http.Handler
 }
 
-func (p *PlayerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+type Player struct {
+	Name string
+	Wins int
+}
 
-	player := strings.TrimPrefix(r.URL.Path, "/player/")
+func NewPlayerServer(store PlayerStore) *PlayerServer {
+	p := new(PlayerServer)
+
+	p.store = store
+
+	router := http.NewServeMux()
+	router.Handle("/league", http.HandlerFunc(p.leagueHandler))
+	router.Handle("/player/", http.HandlerFunc(p.playerHandler))
+
+	return p
+}
+
+func (p *PlayerServer) leagueHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
+func (p *PlayerServer) playerHandler(w http.ResponseWriter, r *http.Request) {
+	player := r.URL.Path[len("/player/"):]
 
 	switch r.Method {
 	case http.MethodPost:
