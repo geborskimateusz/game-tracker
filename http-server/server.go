@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -31,11 +32,25 @@ func NewPlayerServer(store PlayerStore) *PlayerServer {
 	router.Handle("/league", http.HandlerFunc(p.leagueHandler))
 	router.Handle("/player/", http.HandlerFunc(p.playerHandler))
 
+	p.Handler = router
+
 	return p
 }
 
 func (p *PlayerServer) leagueHandler(w http.ResponseWriter, r *http.Request) {
+	leagueTable := p.getLeagueTable()
+
+	json.NewEncoder(w).Encode(leagueTable)
+
 	w.WriteHeader(http.StatusOK)
+}
+
+func (p *PlayerServer) getLeagueTable() []Player {
+	leagueTable := []Player{
+		{"Chris", 20},
+	}
+
+	return leagueTable
 }
 
 func (p *PlayerServer) playerHandler(w http.ResponseWriter, r *http.Request) {
