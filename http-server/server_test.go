@@ -130,16 +130,6 @@ func TestLeague(t *testing.T) {
 
 }
 
-func getLeagueFromResponse(t *testing.T, body io.Reader) (league []Player) {
-	t.Helper()
-	err := json.NewDecoder(body).Decode(&league)
-
-	if err != nil {
-		t.Fatalf("Unable to parse response from server")
-	}
-	return
-}
-
 func assertLeague(t *testing.T, got, want []Player) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v wanted %v", got, want)
@@ -153,9 +143,11 @@ func assertContentTypeAppJSON(t *testing.T, got *httptest.ResponseRecorder) {
 	}
 }
 
-func newLeagueRequest() *http.Request {
-	req, _ := http.NewRequest(http.MethodGet, "/league", nil)
-	return req
+func assertResponseBody(t *testing.T, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Errorf("expected %q, got %q", want, got)
+	}
 }
 
 func assertStatusCode(t *testing.T, got, want int) {
@@ -163,6 +155,21 @@ func assertStatusCode(t *testing.T, got, want int) {
 	if got != want {
 		t.Errorf("expected status %d, got %d", want, got)
 	}
+}
+
+func newLeagueRequest() *http.Request {
+	req, _ := http.NewRequest(http.MethodGet, "/league", nil)
+	return req
+}
+
+func getLeagueFromResponse(t *testing.T, body io.Reader) (league []Player) {
+	t.Helper()
+	err := json.NewDecoder(body).Decode(&league)
+
+	if err != nil {
+		t.Fatalf("Unable to parse response from server")
+	}
+	return
 }
 
 func newPostWinRequest(playername string) *http.Request {
@@ -177,13 +184,6 @@ func newGetScoreRequest(playername string) *http.Request {
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
 
 	return req
-}
-
-func assertResponseBody(t *testing.T, got, want string) {
-	t.Helper()
-	if got != want {
-		t.Errorf("expected %q, got %q", want, got)
-	}
 }
 
 type StubPlayerStore struct {
