@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Tests",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "remotePath": "",
+            "program": "/home/mat/go/src/game-tracker/http-server",
+            "env": {},
+            "args": ["^TestFileSystemStore$"]
+        }
+    ]
+}
