@@ -33,7 +33,8 @@ func TestFileSystemStore(t *testing.T) {
 			{"Name": "Tom", "Wins": 1}]`)
 		defer cleanDatabase()
 
-		store := NewFileSystemPlayerStore(database)
+		store, err := NewFileSystemPlayerStore(database)
+		assertNoError(t, err)
 
 		got := store.GetLeague()
 
@@ -51,7 +52,8 @@ func TestFileSystemStore(t *testing.T) {
 			{"Name": "Tom", "Wins": 1}]`)
 		defer cleanDatabase()
 
-		store := NewFileSystemPlayerStore(database)
+		store, err := NewFileSystemPlayerStore(database)
+		assertNoError(t, err)
 
 		got := store.GetPlayerScore("Tom")
 
@@ -67,7 +69,8 @@ func TestFileSystemStore(t *testing.T) {
 			{"Name": "Tom", "Wins": 100}]`)
 		defer cleanDatabase()
 
-		store := NewFileSystemPlayerStore(database)
+		store, err := NewFileSystemPlayerStore(database)
+		assertNoError(t, err)
 
 		store.RecordWin("Tom")
 
@@ -85,7 +88,8 @@ func TestFileSystemStore(t *testing.T) {
 			{"Name": "Tom", "Wins": 100}]`)
 		defer cleanDatabase()
 
-		store := NewFileSystemPlayerStore(database)
+		store, err := NewFileSystemPlayerStore(database)
+		assertNoError(t, err)
 
 		store.RecordWin("Jenny")
 
@@ -95,10 +99,46 @@ func TestFileSystemStore(t *testing.T) {
 
 		assertScoreEquals(t, got, want)
 	})
+
+	t.Run("works with an empty file", func(t *testing.T) {
+		database, cleanDatabase := createTempFile(t, "")
+		defer cleanDatabase()
+
+		_, err := NewFileSystemPlayerStore(database)
+
+		assertNoError(t, err)
+	})
+
+	t.Run("retuns sorted league", func(t *testing.T) {
+
+		database, cleanDatabase := createTempFile(t, `[
+			{"Name": "Randy", "Wins": 10},	
+			{"Name": "Alice", "Wins": 111}]`)
+		defer cleanDatabase()
+
+		store, err := NewFileSystemPlayerStore(database)
+		assertNoError(t, err)
+
+		got := store.GetLeague()
+
+		want := []Player{
+			{"Alice", 111},
+			{"Randy", 10},
+		}
+
+		assertLeague(t, got, want)
+	})
 }
 
 func assertScoreEquals(t *testing.T, got, want int) {
 	if got != want {
 		t.Errorf("got %d want %d", got, want)
+	}
+}
+
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("didn't expect error gt one, %v", err)
 	}
 }
