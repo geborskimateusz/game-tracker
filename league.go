@@ -1,5 +1,5 @@
-package main
-
+package poker
+ 
 import (
 	"encoding/json"
 	"fmt"
