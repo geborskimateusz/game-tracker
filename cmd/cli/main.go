@@ -1,7 +1,24 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"os"
+
+	poker "github.com/geborskimateusz/game-tracker"
+)
+
+const dbFileName = "game.db.json"
 
 func main() {
-	fmt.Println("Hello CLI")
+	store, close, err := poker.FileSystemPlayerStoreFromFile(dbFileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer close()
+
+	fmt.Println("Let's play poker")
+	fmt.Println("Type {Name} wins to record a win")
+	game := poker.NewCLI(store, os.Stdin)
+	game.PlayPoker()
 }

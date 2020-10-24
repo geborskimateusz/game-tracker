@@ -3,29 +3,19 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	poker "github.com/geborskimateusz/game-tracker"
 )
 
-const dbFilename = "game.db.json"
+const dbFileName = "game.db.json"
 
 func main() {
+	store, close, err := poker.FileSystemPlayerStoreFromFile(dbFileName)
 
-	// The 2nd argument to os.OpenFile lets you define the permissions
-	// for opening the file, in our case O_RDWR means we want to read
-	// and write and os.O_CREATE means create the file if it doesn't exist.
-	// The 3rd argument means sets permissions for the file, in our case,
-	// all users can read and writ:e the file.
-	db, err := os.OpenFile(dbFilename, os.O_RDWR|os.O_CREATE, 6666)
 	if err != nil {
-		log.Fatalf("problem opening %s %v", dbFilename, err)
+		log.Fatal(err)
 	}
-
-	store, err := poker.NewFileSystemPlayerStore(db)
-	if err != nil {
-		log.Fatalf("problem creating file system player store, %v", err)
-	}
+	defer close()
 
 	server := poker.NewPlayerServer(store)
 

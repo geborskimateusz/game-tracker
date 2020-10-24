@@ -1,34 +1,36 @@
-package poker
+package poker_test
 
 import (
 	"strings"
 	"testing"
+
+	poker "github.com/geborskimateusz/game-tracker"
 )
 
 func TestCLI(t *testing.T) {
 
 	t.Run("Chris wins", func(t *testing.T) {
 		in := strings.NewReader("Chris wins\n")
-		playerStore := &StubPlayerStore{}
+		playerStore := &poker.StubPlayerStore{}
 
-		cli := &CLI{playerStore, in}
-		cli.playPoker()
+		cli := poker.NewCLI(playerStore, in)
+		cli.PlayPoker()
 
 		want := "Chris"
 
-		assertPlayerWin(t, playerStore, want)
+		poker.AssertPlayerWin(t, playerStore, want)
 	})
 
-}
+	t.Run("Cleo wins", func(t *testing.T) {
+		in := strings.NewReader("Cleo wins\n")
+		playerStore := &poker.StubPlayerStore{}
 
-func assertPlayerWin(t *testing.T, store *StubPlayerStore, winner string) {
-	t.Helper()
+		cli := poker.NewCLI(playerStore, in)
+		cli.PlayPoker()
 
-	if len(store.winCalls) != 1 {
-		t.Fatalf("got %d calls to RecordWin want %d", len(store.winCalls), 1)
-	}
+		want := "Cleo"
 
-	if store.winCalls[0] != winner {
-		t.Errorf("expected winner %q got %q", store.winCalls[0], winner)
-	}
+		poker.AssertPlayerWin(t, playerStore, want)
+	})
+
 }
