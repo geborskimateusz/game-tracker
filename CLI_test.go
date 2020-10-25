@@ -8,12 +8,13 @@ import (
 )
 
 func TestCLI(t *testing.T) {
+	var anySpyAlerter = &SpyBlindAlerter{}
 
 	t.Run("Chris wins", func(t *testing.T) {
 		in := strings.NewReader("Chris wins\n")
 		playerStore := &poker.StubPlayerStore{}
 
-		cli := poker.NewCLI(playerStore, in)
+		cli := poker.NewCLI(playerStore, in, anySpyAlerter)
 		cli.PlayPoker()
 
 		want := "Chris"
@@ -25,7 +26,7 @@ func TestCLI(t *testing.T) {
 		in := strings.NewReader("Cleo wins\n")
 		playerStore := &poker.StubPlayerStore{}
 
-		cli := poker.NewCLI(playerStore, in)
+		cli := poker.NewCLI(playerStore, in, anySpyAlerter)
 		cli.PlayPoker()
 
 		want := "Cleo"
