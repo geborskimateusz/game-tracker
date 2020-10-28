@@ -18,6 +18,6 @@ func (b BlindAlertFunc) ScheduleAlertAt(duration time.Duration, amount int) {
 
 func StdOutAlerter(duration time.Duration, amount int) {
 	time.AfterFunc(duration, func() {
-		fmt.Fprint(os.Stdout, "Blimd is now %d\n", amount)
+		fmt.Fprintf(os.Stdout, "Blind is now %d\n", amount)
 	})
 }
