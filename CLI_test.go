@@ -15,8 +15,9 @@ func TestCLI(t *testing.T) {
 		stdin := strings.NewReader("Chris wins\n")
 		stdout := &bytes.Buffer{}
 		playerStore := &poker.StubPlayerStore{}
+		game := &GameSpy{}
 
-		cli := poker.NewCLI(playerStore, stdin, stdout, anySpyAlerter)
+		cli := poker.NewCLI(stdin, stdout, game)
 
 		cli.PlayPoker()
 
@@ -39,4 +40,9 @@ func TestCLI(t *testing.T) {
 		poker.AssertPlayerWin(t, playerStore, want)
 	})
 
+}
+
+type GameSpy struct {
+	StartCalledWith  int
+	FinishCalledWith string
 }
