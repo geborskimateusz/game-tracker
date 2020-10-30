@@ -1,4 +1,4 @@
-package poker 
+package poker
 
 import (
 	"net/http"
@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-func TestRecordingWindAndRetrievingThem(t *testing.T) {
+func TestRecordingWinsAndRetrievingThem(t *testing.T) {
 	database, cleanDatabase := createTempFile(t, `[]`)
 	defer cleanDatabase()
-
 	store, err := NewFileSystemPlayerStore(database)
+
 	assertNoError(t, err)
 
 	server := NewPlayerServer(store)
@@ -20,23 +20,23 @@ func TestRecordingWindAndRetrievingThem(t *testing.T) {
 	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
 	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
 
-	t.Run("assert score", func(t *testing.T) {
+	t.Run("get score", func(t *testing.T) {
 		response := httptest.NewRecorder()
 		server.ServeHTTP(response, newGetScoreRequest(player))
-		assertStatusCode(t, response.Code, http.StatusOK)
+		assertStatus(t, response.Code, http.StatusOK)
+
 		assertResponseBody(t, response.Body.String(), "3")
 	})
 
-	t.Run("get league", func(t *testing.T) {
+	t.Run("get League", func(t *testing.T) {
 		response := httptest.NewRecorder()
 		server.ServeHTTP(response, newLeagueRequest())
-		assertStatusCode(t, response.Code, http.StatusOK)
+		assertStatus(t, response.Code, http.StatusOK)
 
 		got := getLeagueFromResponse(t, response.Body)
 		want := []Player{
 			{"Pepper", 3},
 		}
-
 		assertLeague(t, got, want)
 	})
 }
