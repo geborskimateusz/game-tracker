@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	poker "github.com/geborskimateusz/game-tracker"
 )
 
 var dummyBlindAlerter = &poker.SpyBlindAlerter{}

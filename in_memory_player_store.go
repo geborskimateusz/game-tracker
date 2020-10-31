@@ -1,4 +1,4 @@
-package tracker
+package poker
 
 // NewInMemoryPlayerStore initialises an empty player store.
 func NewInMemoryPlayerStore() *InMemoryPlayerStore {
