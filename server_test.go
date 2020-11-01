@@ -6,7 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func TestGETPlayers(t *testing.T) {
@@ -18,7 +22,7 @@ func TestGETPlayers(t *testing.T) {
 		nil,
 		nil,
 	}
-	server := NewPlayerServer(&store)
+	server, _ := NewPlayerServer(&store)
 
 	t.Run("returns Pepper's score", func(t *testing.T) {
 		request := newGetScoreRequest("Pepper")
@@ -56,7 +60,7 @@ func TestStoreWins(t *testing.T) {
 		nil,
 		nil,
 	}
-	server := NewPlayerServer(&store)
+	server, _ := NewPlayerServer(&store)
 
 	t.Run("it records wins on POST", func(t *testing.T) {
 		player := "Pepper"
@@ -81,7 +85,7 @@ func TestLeague(t *testing.T) {
 		}
 
 		store := StubPlayerStore{nil, nil, wantedLeague}
-		server := NewPlayerServer(&store)
+		server, _ := NewPlayerServer(&store)
 
 		request := newLeagueRequest()
 		response := httptest.NewRecorder()
@@ -99,7 +103,7 @@ func TestLeague(t *testing.T) {
 
 func TestGame(t *testing.T) {
 	t.Run("GET /game returns 200", func(t *testing.T) {
-		server := NewPlayerServer(&StubPlayerStore{})
+		server, _ := NewPlayerServer(&StubPlayerStore{})
 
 		req := newGameRequest()
 		res := httptest.NewRecorder()
@@ -107,6 +111,30 @@ func TestGame(t *testing.T) {
 		server.ServeHTTP(res, req)
 
 		assertStatus(t, res.Code, http.StatusOK)
+	})
+
+	t.Run("when we get message over websocket it is a winner of game", func(t *testing.T) {
+		store := &StubPlayerStore{}
+		winner := "Mat"
+
+		playerSrv, _ := NewPlayerServer(store)
+		server := httptest.NewServer(playerSrv)
+		defer server.Close()
+
+		wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
+
+		ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		if err != nil {
+			t.Fatalf("could not open websocket connection on %s %v", wsURL, err)
+		}
+		defer ws.Close()
+
+		if err := ws.WriteMessage(websocket.TextMessage, []byte(winner)); err != nil {
+			t.Fatalf("could not send message over connection on %v", err)
+		}
+
+		time.Sleep(10 * time.Millisecond)
+		AssertPlayerWin(t, store, winner)
 	})
 }
 
