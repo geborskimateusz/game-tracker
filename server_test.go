@@ -1,4 +1,4 @@
-package poker
+package poker_test
 
 import (
 	"fmt"
@@ -10,11 +10,16 @@ import (
 	"testing"
 	"time"
 
+	poker "github.com/geborskimateusz/game-tracker"
 	"github.com/gorilla/websocket"
 )
 
+var (
+	game = &GameSpy{}
+)
+
 func TestGETPlayers(t *testing.T) {
-	store := StubPlayerStore{
+	store := poker.StubPlayerStore{
 		map[string]int{
 			"Pepper": 20,
 			"Floyd":  10,
@@ -22,7 +27,7 @@ func TestGETPlayers(t *testing.T) {
 		nil,
 		nil,
 	}
-	server, _ := NewPlayerServer(&store)
+	server, _ := poker.NewPlayerServer(&store, game)
 
 	t.Run("returns Pepper's score", func(t *testing.T) {
 		request := newGetScoreRequest("Pepper")
@@ -55,12 +60,12 @@ func TestGETPlayers(t *testing.T) {
 }
 
 func TestStoreWins(t *testing.T) {
-	store := StubPlayerStore{
+	store := poker.StubPlayerStore{
 		map[string]int{},
 		nil,
 		nil,
 	}
-	server, _ := NewPlayerServer(&store)
+	server, _ := poker.NewPlayerServer(&store, game)
 
 	t.Run("it records wins on POST", func(t *testing.T) {
 		player := "Pepper"
@@ -71,21 +76,21 @@ func TestStoreWins(t *testing.T) {
 		server.ServeHTTP(response, request)
 
 		assertStatus(t, response.Code, http.StatusAccepted)
-		AssertPlayerWin(t, &store, player)
+		poker.AssertPlayerWin(t, &store, player)
 	})
 }
 
 func TestLeague(t *testing.T) {
 
 	t.Run("it returns the League table as JSON", func(t *testing.T) {
-		wantedLeague := []Player{
+		wantedLeague := []poker.Player{
 			{"Cleo", 32},
 			{"Chris", 20},
 			{"Tiest", 14},
 		}
 
-		store := StubPlayerStore{nil, nil, wantedLeague}
-		server, _ := NewPlayerServer(&store)
+		store := poker.StubPlayerStore{nil, nil, wantedLeague}
+		server, _ := poker.NewPlayerServer(&store, game)
 
 		request := newLeagueRequest()
 		response := httptest.NewRecorder()
@@ -96,14 +101,14 @@ func TestLeague(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 		assertLeague(t, got, wantedLeague)
-		assertContentType(t, response, jsonContentType)
+		assertContentType(t, response, "application/json")
 
 	})
 }
 
 func TestGame(t *testing.T) {
 	t.Run("GET /game returns 200", func(t *testing.T) {
-		server, _ := NewPlayerServer(&StubPlayerStore{})
+		server, _ := poker.NewPlayerServer(&poker.StubPlayerStore{}, game)
 
 		req := newGameRequest()
 		res := httptest.NewRecorder()
@@ -114,10 +119,10 @@ func TestGame(t *testing.T) {
 	})
 
 	t.Run("when we get message over websocket it is a winner of game", func(t *testing.T) {
-		store := &StubPlayerStore{}
+		store := &poker.StubPlayerStore{}
 		winner := "Mat"
 
-		playerSrv, _ := NewPlayerServer(store)
+		playerSrv, _ := poker.NewPlayerServer(store, game)
 		server := httptest.NewServer(playerSrv)
 		defer server.Close()
 
@@ -134,12 +139,30 @@ func TestGame(t *testing.T) {
 		}
 
 		time.Sleep(10 * time.Millisecond)
-		AssertPlayerWin(t, store, winner)
+		poker.AssertPlayerWin(t, store, winner)
+	})
+
+	t.Run("start a game with 3 player and declare Ruth the winner", func(t *testing.T) {
+		store := &poker.StubPlayerStore{}
+		// game := &GameSpy{}
+		winner := "Ruth"
+		server := httptest.NewServer(mustMakePlayerServer(t, store, game))
+		ws := mustDialWS(t, "ws"+strings.TrimPrefix(server.URL, "http")+"/ws")
+
+		defer server.Close()
+		defer ws.Close()
+
+		writeWSMessage(t, ws, "3")
+		writeWSMessage(t, ws, winner)
+
+		time.Sleep(10 * time.Millisecond)
+		assertGameStartedWith(t, game, 3)
+		assertFinishCalledWith(t, game, winner)
 	})
 }
 
-func mustMakePlayerServer(t *testing.T, store PlayerStore) *PlayerServer {
-	server, err := NewPlayerServer(store)
+func mustMakePlayerServer(t *testing.T, store poker.PlayerStore, game poker.Game) *poker.PlayerServer {
+	server, err := poker.NewPlayerServer(store, game)
 	if err != nil {
 		t.Fatal("problem creating player server", err)
 	}
@@ -169,9 +192,9 @@ func assertContentType(t *testing.T, response *httptest.ResponseRecorder, want s
 	}
 }
 
-func getLeagueFromResponse(t *testing.T, body io.Reader) []Player {
+func getLeagueFromResponse(t *testing.T, body io.Reader) []poker.Player {
 	t.Helper()
-	league, err := NewLeague(body)
+	league, err := poker.NewLeague(body)
 
 	if err != nil {
 		t.Fatalf("Unable to parse response from server %q into slice of Player, '%v'", body, err)
@@ -180,7 +203,7 @@ func getLeagueFromResponse(t *testing.T, body io.Reader) []Player {
 	return league
 }
 
-func assertLeague(t *testing.T, got, want []Player) {
+func assertLeague(t *testing.T, got, want []poker.Player) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v want %v", got, want)

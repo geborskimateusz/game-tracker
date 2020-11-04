@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
@@ -27,6 +29,7 @@ type PlayerServer struct {
 	store PlayerStore
 	http.Handler
 	template *template.Template
+	game     Game
 }
 
 const htmlTemplatePath = "game.html"
@@ -34,7 +37,7 @@ const htmlTemplatePath = "game.html"
 const jsonContentType = "application/json"
 
 // NewPlayerServer creates a PlayerServer with routing configured.
-func NewPlayerServer(store PlayerStore) (*PlayerServer, error) {
+func NewPlayerServer(store PlayerStore, game Game) (*PlayerServer, error) {
 	p := new(PlayerServer)
 
 	tmpl, err := template.ParseFiles(htmlTemplatePath)
@@ -43,6 +46,7 @@ func NewPlayerServer(store PlayerStore) (*PlayerServer, error) {
 		return nil, fmt.Errorf("problem loading template %s %v", htmlTemplatePath, err)
 	}
 
+	p.game = game
 	p.template = tmpl
 	p.store = store
 
@@ -84,6 +88,11 @@ var wsUpgrader = websocket.Upgrader{
 
 func (p *PlayerServer) webSocket(w http.ResponseWriter, r *http.Request) {
 	conn, _ := wsUpgrader.Upgrade(w, r, nil)
+
+	_, numberOfPlayerMsg, _ := conn.ReadMessage()
+	numOfPlayers, _ := strconv.Atoi(string(numberOfPlayerMsg))
+	p.game.Start(numOfPlayers, ioutil.Discard)
+
 	_, winnerMsg, _ := conn.ReadMessage()
 	p.store.RecordWin(string(winnerMsg))
 }
