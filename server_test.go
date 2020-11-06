@@ -118,34 +118,12 @@ func TestGame(t *testing.T) {
 		assertStatus(t, res.Code, http.StatusOK)
 	})
 
-	t.Run("when we get message over websocket it is a winner of game", func(t *testing.T) {
-		store := &poker.StubPlayerStore{}
-		winner := "Mat"
-
-		playerSrv, _ := poker.NewPlayerServer(store, game)
-		server := httptest.NewServer(playerSrv)
-		defer server.Close()
-
-		wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
-
-		ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-		if err != nil {
-			t.Fatalf("could not open websocket connection on %s %v", wsURL, err)
-		}
-		defer ws.Close()
-
-		if err := ws.WriteMessage(websocket.TextMessage, []byte(winner)); err != nil {
-			t.Fatalf("could not send message over connection on %v", err)
-		}
-
-		time.Sleep(10 * time.Millisecond)
-		poker.AssertPlayerWin(t, store, winner)
-	})
-
 	t.Run("start a game with 3 player and declare Ruth the winner", func(t *testing.T) {
-		store := &poker.StubPlayerStore{}
-		// game := &GameSpy{}
+		wantedBlindAlert := "Blind is 100"
 		winner := "Ruth"
+
+		game := &GameSpy{BlindAlert: []byte(wantedBlindAlert)}
+		store := &poker.StubPlayerStore{}
 		server := httptest.NewServer(mustMakePlayerServer(t, store, game))
 		ws := mustDialWS(t, "ws"+strings.TrimPrefix(server.URL, "http")+"/ws")
 
@@ -156,8 +134,11 @@ func TestGame(t *testing.T) {
 		writeWSMessage(t, ws, winner)
 
 		time.Sleep(10 * time.Millisecond)
+
 		assertGameStartedWith(t, game, 3)
 		assertFinishCalledWith(t, game, winner)
+		within(t, 10*time.Millisecond, func() { assertWebsocketGotMsg(t, ws, wantedBlindAlert) })
+
 	})
 }
 
@@ -241,5 +222,33 @@ func assertResponseBody(t *testing.T, got, want string) {
 	t.Helper()
 	if got != want {
 		t.Errorf("response body is wrong, got %q want %q", got, want)
+	}
+}
+
+// take a function assert as an argument and then runs it in a go routine. If/When the function finishes it will signal it is done via the done channel.
+// While that happens we use a select statement which lets us wait for a channel to send a message. From here it is a race between the assert function and time.
+// After which will send a signal when the duration has occurred.
+func within(t *testing.T, d time.Duration, assert func()) {
+	t.Helper()
+
+	done := make(chan struct{}, 1)
+
+	go func() {
+		assert()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-time.After(d):
+		t.Error("timed out")
+	case <-done:
+	}
+
+}
+
+func assertWebsocketGotMsg(t *testing.T, ws *websocket.Conn, want string) {
+	_, msg, _ := ws.ReadMessage()
+	if string(msg) != want {
+		t.Errorf(`got "%s", want "%s"`, string(msg), want)
 	}
 }
